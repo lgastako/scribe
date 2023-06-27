@@ -2,12 +2,14 @@ from typing import List, Union
 
 import argparse
 import itertools
+import logging as log
 import os
 
 from functools import reduce
 
 from pydantic import BaseModel
 
+import ai
 import config
 
 def main():
@@ -24,15 +26,36 @@ def main():
     ])
     print(f"Final (merged) config: {merged_config}")
 
-    print(f"Bot name: {merged_config.bot_name}")
-    print(f"Models: {merged_config.models}")
-    print(f"Initial system prompt: {merged_config.initial_system_prompt}")
-    print(f"Personal system prompt: {merged_config.personal_system_prompt}")
-    print(f"Temperature: {merged_config.temperature}")
-    print(f"Disable message logging: {merged_config.disable_msg_log}")
-    print(f"Log level: {merged_config.log_level}")
+    log.basicConfig(level=merged_config.log_level)
 
-    print(f"Scribe {merged_config.bot_name} Online.")
+    log.info(f"Bot name: {merged_config.bot_name}")
+    log.info(f"Models: {merged_config.models}")
+    log.debug(f"Initial system prompt: {merged_config.initial_system_prompt}")
+    log.debug(f"Personal system prompt: {merged_config.personal_system_prompt}")
+    log.info(f"Temperature: {merged_config.temperature}")
+    if merged_config.disable_msg_log:
+        log.info(f"Disable message logging: {merged_config.disable_msg_log}")
+    else:
+        log.debug(f"Disable message logging: {merged_config.disable_msg_log}")
+
+    log.debug(f"Log level: {merged_config.log_level}")
+    log.info(f"Scribe {merged_config.bot_name} Online.")
+
+    print("Ctrl-C to reload, Ctrl-D to exit.")
+
+    # OpenAI system prompt
+    messages =[
+        { "role": "system", "content": merged_config.initial_system_prompt },
+    ]
+    if merged_config.personal_system_prompt:
+        messages.append({ "role": "system", "content": merged_config.personal_system_prompt })
+    current_model = merged_config.models[0]
+    while True:
+        print("me> ", end="")
+        query = input()
+        messages.append({ "role": "user", "content": query })
+        response = ai.query_by_messages(current_model, messages)
+        messages.append({ "role": "assistant", "content": response })
 
 if __name__ == '__main__':
     main()
